@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Markup</title>
+</head>
+
+<body>
+    <canvas id="canvas" width="0" height="0">
+
+    </canvas>
+    <div style="background-color: burlywood;width: 200px;height: 100px;" id="dropZone" >
+        <h6>DROP FILE</h6>
+    </div>
+    <br/>
+
+        <textarea value="" rows="4" cols="50" type="text" id="points_textview" >
+        </textarea>
+
+        <button id="load_points" onclick="loadPoints()">
+
+            Load Points
+        </button>
+    <br/>
+    <button id="dwnload_btn">Download</button>
+</body>
+<script src="dropbox.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+<script>
+    function loadPoints() {
+        var text =  document.getElementById('points_textview').value;
+        points = text.trim().split('\n').slice(3).slice(0,-1).map( function(e) {return {x: parseInt(e.trim().split(" ")[0]),
+            y: parseInt(e.trim().split(" ")[1]) } } )
+
+    }
+
+    var imageLoaded = false;
+    var imageObj = new Image();
+
+    imageObj.onload = function() {
+        imageLoaded = true;
+        var canvas = document.getElementById("canvas");
+        canvas.width = imageObj.width;
+        canvas.height = imageObj.height;
+        redraw(points, canvas.getContext("2d"));
+    };
+
+
+    var loadImage = function(obj){
+        console.log(obj.name)
+        imageObj.src = obj.data;
+        imageObj.name = obj.name;
+        points = []
+    }
+    var files = [];
+    dropObj.onDrop(function (obj) {
+        files.push(obj);
+        loadImage(obj);
+
+
+    });
+
+    function redraw(points,ctx) {
+        if(imageLoaded){
+            ctx.drawImage(imageObj, 0,0);
+        }
+
+        points.forEach(function (point) {
+            if(!point.select_point)
+                switch (mode) {
+                    case PLACE_MOVED_POINT:
+                    case MOVE_POINTS:
+                        ctx.fillStyle = "#00FF00";
+                        break;
+                    case ADD_POINTS:
+                        ctx.fillStyle = "#FF0000";
+                        break;
+
+                }
+            else
+                ctx.fillStyle = "#FFFFFF";
+
+            ctx.fillRect(point.x,point.y,5,5);
+        });
+        printPoints(points);
+    }
+
+    function printPoints(points) {
+    }
+    function movePoints(dx,dy) {
+        var canvas = document.getElementById("canvas");
+        var ctx = canvas.getContext("2d");
+        points = points.map(function(e) { return {x : e.x + dx, y : e.y + dy} })
+        redraw(points,ctx)
+    }
+    var points = JSON.parse('[{"x":359,"y":551},{"x":336,"y":502},{"x":315,"y":467},{"x":301,"y":420},{"x":297,"y":375},{"x":291,"y":353},{"x":290,"y":335},{"x":303,"y":330},{"x":312,"y":343},{"x":318,"y":364},{"x":332,"y":411},{"x":359,"y":359},{"x":368,"y":315},{"x":378,"y":277},{"x":399,"y":258},{"x":401,"y":245},{"x":412,"y":248},{"x":410,"y":259},{"x":396,"y":310},{"x":397,"y":359},{"x":413,"y":317},{"x":426,"y":278},{"x":444,"y":262},{"x":447,"y":249},{"x":460,"y":253},{"x":454,"y":269},{"x":448,"y":286},{"x":437,"y":324},{"x":429,"y":368},{"x":450,"y":340},{"x":467,"y":308},{"x":483,"y":291},{"x":486,"y":278},{"x":500,"y":285},{"x":495,"y":300},{"x":486,"y":318},{"x":470,"y":351},{"x":453,"y":392},{"x":476,"y":375},{"x":502,"y":338},{"x":509,"y":328},{"x":518,"y":335},{"x":513,"y":351},{"x":493,"y":388},{"x":470,"y":424},{"x":435,"y":493},{"x":453,"y":549},{"x":375,"y":374},{"x":415,"y":384},{"x":437,"y":403},{"x":455,"y":463}]');
+    points = [];
+    $("#canvas").on('click',function (e) {
+        var canvas = document.getElementById("canvas");
+        var ctx = canvas.getContext("2d");
+
+        var x;
+        var y;
+        if (e.pageX || e.pageY) {
+            x = e.pageX;
+            y = e.pageY;
+        }
+        else {
+            x = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
+            y = e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
+        }
+        x -= canvas.offsetLeft;
+        y -= canvas.offsetTop;
+        if(y > imageObj.height || x > imageObj.width) return;
+        var clearPoints = function () {
+            points = points.map( function (e) {
+                return {x: e.x, y: e.y};
+            });
+        }
+        switch (mode) {
+
+            case MOVE_POINTS:
+                //Cleared select
+               clearPoints();
+
+                var min_distance_index = 0, min_distance = 1e6;
+                for(var i = 0;i < points.length;i++ ){
+                    var distance = Math.sqrt(Math.pow(points[i].x - x,2) +
+                            Math.pow(points[i].y - y,2));
+                    if(distance < min_distance){
+                        min_distance = distance;
+                        min_distance_index = i;
+                    }
+                }
+
+                points[min_distance_index] = {x:x,y:y, select_point: true};
+                mode = PLACE_MOVED_POINT;
+
+                break;
+            case PLACE_MOVED_POINT:
+
+
+                var point = points.filter(function (e) {
+                    return e.select_point
+                })[0];
+                point.x = x;
+                point.y = y;
+
+                mode = MOVE_POINTS;
+
+                break;
+            case ADD_POINTS:
+                points.push({x:x,y:y});
+                break;
+        }
+
+
+        redraw(points,ctx);
+    });
+    window.onload=function(){
+        document.body.onkeyup=function(e){
+            var keyCode = (window.event) ? event.keyCode : e.which;
+            var UNDO = 90,REDO=85, DOWNLOAD=68;
+           if(keyCode == UNDO){
+               points.pop();
+           }else if(keyCode == DOWNLOAD){
+                downloadPoints();
+                files.pop();
+                loadImage(files[files.length-1]);
+           }
+            redraw(points, document.getElementById("canvas").getContext("2d"));
+        };
+    };
+
+    var downloadPoints = function(){
+        var originalPoints = points;
+        var s = "version: 1\n"+
+                "n_points: "+originalPoints.length+"\n"+
+                "{\n" +
+                originalPoints.map(function (p) {
+                    return p.x + " "+ p.y
+                }).join(" \n ") + "\n"+
+                "}\n";
+        download(imageObj.name+".pts",s);
+    }
+
+    $("#dwnload_btn").on('click',downloadPoints);
+    function download(filename, text) {
+        var pom = document.createElement('a');
+        pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+        pom.setAttribute('download', filename);
+
+        if (document.createEvent) {
+            var event = document.createEvent('MouseEvents');
+            event.initEvent('click', true, true);
+            pom.dispatchEvent(event);
+        }
+        else {
+            pom.click();
+        }
+    }
+
+</script>
+</html>
