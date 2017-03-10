@@ -6,13 +6,20 @@
 </head>
 
 <body>
+
+<button id="dwnload_btn">Download</button>
+<button id="undo_btn">Undo</button><br />
     <canvas id="canvas" width="0" height="0">
 
     </canvas>
+
+
     <div style="background-color: burlywood;width: 200px;height: 100px;" id="dropZone" >
         <h6>DROP FILE</h6>
     </div>
+
     <br/>
+
 
         <textarea value="" rows="4" cols="50" type="text" id="points_textview" >
         </textarea>
@@ -22,7 +29,7 @@
             Load Points
         </button>
     <br/>
-    <button id="dwnload_btn">Download</button>
+
 </body>
 <script src="dropbox.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
@@ -165,8 +172,7 @@
                points.pop();
            }else if(keyCode == DOWNLOAD){
                 downloadPoints();
-                files.pop();
-                loadImage(files[files.length-1]);
+
            }
             redraw(points, document.getElementById("canvas").getContext("2d"));
         };
@@ -182,7 +188,13 @@
                 }).join(" \n ") + "\n"+
                 "}\n";
         download(imageObj.name+".pts",s);
-    }
+        files.pop();
+        loadImage(files[files.length-1]);
+    };
+    $("#undo_btn").on('click', function () {
+        points.pop();
+        redraw(points, document.getElementById("canvas").getContext("2d"));
+    });
 
     $("#dwnload_btn").on('click',downloadPoints);
     function download(filename, text) {
